@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt');
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const axios = require('axios'); // Ya importado, usado para reCAPTCHA y ahora para Discord Webhook
+const axios = require('axios');
 const path = require('path');
 const validator = require('validator');
 
@@ -275,14 +275,22 @@ app.get('/api/leads', authenticateJWT, async (req, res) => {
   }
 });
 
+// Ruta para ACTUALIZAR EL ESTADO DE UN LEAD
 app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
   try {
     const leadId = req.params.id;
     const { status } = req.body;
 
-    if (!leadId || !validator.isAlphanumeric(leadId)) {
-      return res.status(400).json({ message: 'ID de lead inválido.' });
+    // --- CAMBIO AQUÍ: Permitir el guion en la validación del ID ---
+    // Los IDs de Realtime Database pueden contener guiones, así que ajustamos la regex.
+    // Usamos una regex para permitir alfanuméricos y guiones.
+    const firebaseIdRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!leadId || !firebaseIdRegex.test(leadId)) {
+      console.warn('DEBUG WARNING: ID de lead inválido o no cumple el formato esperado:', leadId);
+      return res.status(400).json({ message: 'ID de lead inválido o formato incorrecto.' });
     }
+    // ----------------------------------------------------------------
+
     const validStatuses = ['Nuevo', 'Contactado', 'Descartado'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: `Estado inválido. Los estados permitidos son: ${validStatuses.join(', ')}.` });
@@ -397,13 +405,13 @@ app.post('/contact', async (req, res) => {
     if (DISCORD_WEBHOOK_URL) {
       try {
         const discordMessage = {
-          username: "Mini CRM Leads", // Nombre del bot en Discord
-          avatar_url: "https://placehold.co/128x128/007bff/ffffff?text=CRM", // URL de un avatar para el bot
+          username: "Mini CRM Leads",
+          avatar_url: "https://placehold.co/128x128/007bff/ffffff?text=CRM",
           embeds: [
             {
               title: "¡Nuevo Lead Recibido!",
               description: `Un nuevo contacto ha llenado el formulario.`,
-              color: 3447003, // Un color azul para el embed
+              color: 3447003,
               fields: [
                 { name: "Nombre", value: name, inline: true },
                 { name: "Email", value: email, inline: true },
@@ -411,7 +419,7 @@ app.post('/contact', async (req, res) => {
                 { name: "Mensaje", value: message, inline: false },
                 { name: "Estado Inicial", value: "Nuevo", inline: true }
               ],
-              timestamp: new Date().toISOString(), // Fecha y hora actual
+              timestamp: new Date().toISOString(),
               footer: {
                 text: "Notificación de Mini CRM"
               }
@@ -425,14 +433,13 @@ app.post('/contact', async (req, res) => {
           }
         });
 
-        if (discordResponse.status === 204) { // Discord devuelve 204 No Content para éxito
+        if (discordResponse.status === 204) {
           console.log('DEBUG: Notificación por Discord Webhook enviada con éxito.');
         } else {
           console.warn('DEBUG WARNING: Error al enviar notificación por Discord Webhook. Estado:', discordResponse.status, 'Datos:', discordResponse.data);
         }
       } catch (discordError) {
         console.error('DEBUG ERROR: Fallo al comunicarse con la API de Discord Webhook:', discordError.message);
-        // console.error('DEBUG: Discord Error Details:', discordError.response ? discordError.response.data : 'No response data'); // Para más detalles de error
       }
     } else {
       console.warn('DEBUG WARNING: No se enviará notificación por Discord Webhook. URL no definida.');
