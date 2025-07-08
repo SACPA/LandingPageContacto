@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini CRM - Gestión de Leads</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 30px;
+        }
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header-controls button {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .header-controls button:hover {
+            background-color: #c82333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        select {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination-controls button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .pagination-controls button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .pagination-controls button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none; /* Oculto por defecto */
+            text-align: center;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-controls">
+            <h1>Gestión de Leads</h1>
+            <button id="logoutButton">Cerrar Sesión</button>
+        </div>
+        
+        <div id="leadsTableContainer">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Mensaje</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    <!-- Los leads se cargarán aquí -->
+                    <tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="pagination-controls">
+            <button id="prevPageButton" disabled>Anterior</button>
+            <span id="currentPageInfo">Página 1</span>
+            <button id="nextPageButton">Siguiente</button>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const leadsTableBody = document.getElementById('leadsTableBody');
+        const prevPageButton = document.getElementById('prevPageButton');
+        const nextPageButton = document.getElementById('nextPageButton');
+        const currentPageInfo = document.getElementById('currentPageInfo');
+        const logoutButton = document.getElementById('logoutButton');
+        const messageDiv = document.getElementById('message');
+
+        const LEADS_PER_PAGE = 5; // Define cuántos leads mostrar por página
+        let currentPage = 1;
+        let currentNextPageKey = null; // Para la paginación basada en cursor de Realtime Database
+        let lastFetchedLeads = []; // Almacena los leads de la última solicitud
+        let pageKeys = { 1: null }; // Almacena la clave de inicio para cada página
+
+        // Función para mostrar mensajes al usuario
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000); // Ocultar después de 5 segundos
+        }
+
+        // Función para obtener el token JWT del localStorage
+        function getAuthToken() {
+            return localStorage.getItem('jwtToken');
+        }
+
+        // Función para verificar si el usuario está autenticado
+        function checkAuth() {
+            const token = getAuthToken();
+            if (!token) {
+                // Si no hay token, redirige al login
+                alert('No autenticado. Por favor, inicia sesión.');
+                window.location.href = '/dashboard'; // Redirige a la página de login
+            }
+        }
+
+        // Función para cerrar sesión
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('jwtToken'); // Elimina el token
+            alert('Sesión cerrada.');
+            window.location.href = '/dashboard'; // Redirige a la página de login
+        });
+
+        // Función para formatear la fecha
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            return date.toLocaleString(); // Formato legible local
+        }
+
+        // Función para cargar los leads
+        async function loadLeads(page, startAfterKey = null) {
+            checkAuth(); // Verifica autenticación antes de cada llamada API
+            const token = getAuthToken();
+            if (!token) return; // Si no hay token, la redirección ya ocurrió
+
+            leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>';
+            showMessage('Cargando leads...', 'info');
+
+            let url = `/api/leads?limit=${LEADS_PER_PAGE}`;
+            if (startAfterKey) {
+                url += `&startAfterKey=${startAfterKey}`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    lastFetchedLeads = data.leads; // Guarda los leads obtenidos
+                    currentNextPageKey = data.pagination.nextPageKey;
+
+                    renderLeads(data.leads);
+                    updatePaginationControls(data.pagination.hasNextPage);
+                    currentPageInfo.textContent = `Página ${currentPage}`;
+                    showMessage('Leads cargados con éxito.', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Error al cargar leads: ${errorData.message || 'Error desconocido'}`, 'error');
+                    console.error('DEBUG: Error al cargar leads:', errorData);
+                    if (response.status === 401 || response.status === 403) {
+                        // Si el token es inválido/expirado, forzar logout
+                        localStorage.removeItem('jwtToken');
+                        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                    }
+                }
+            } catch (error) {
+                showMessage('Error de conexión al cargar leads.', 'error');
+                console.error('DEBUG: Error de red/servidor al cargar leads:', error);
+            }
+        }
+
+        // Función para renderizar los leads en la tabla
+        function renderLeads(leads) {
+            leadsTableBody.innerHTML = ''; // Limpia la tabla
+            if (leads.length === 0) {
+                leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay leads para mostrar.</td></tr>';
+                return;
+            }
+
+            leads.forEach(lead => {
+                const row = leadsTableBody.insertRow();
+                row.insertCell().textContent = lead.id;
+                row.insertCell().textContent = lead.name;
+                row.insertCell().textContent = lead.email;
+                row.insertCell().textContent = lead.phone;
+                row.insertCell().textContent = lead.message;
+                row.insertCell().textContent = formatTimestamp(lead.timestamp);
+
+                const statusCell = row.insertCell();
+                const statusSelect = document.createElement('select');
+                statusSelect.id = `status-${lead.id}`;
+                ['Nuevo', 'Contactado', 'Descartado'].forEach(statusOption => {
+                    const option = document.createElement('option');
+                    option.value = statusOption;
+                    option.textContent = statusOption;
+                    if (lead.status === statusOption) {
+                        option.selected = true;
+                    }
+                    statusSelect.appendChild(option);
+                });
+                statusCell.appendChild(statusSelect);
+
+                const actionCell = row.insertCell();
+                const updateButton = document.createElement('button');
+                updateButton.textContent = 'Actualizar';
+                updateButton.style.backgroundColor = '#28a745';
+                updateButton.style.color = 'white';
+                updateButton.style.padding = '5px 10px';
+                updateButton.style.border = 'none';
+                updateButton.style.borderRadius = '5px';
+                updateButton.style.cursor = 'pointer';
+                updateButton.style.fontSize = '0.8em';
+                updateButton.addEventListener('click', () => updateLeadStatus(lead.id, statusSelect.value));
+                actionCell.appendChild(updateButton);
+            });
+        }
+
+        // Función para actualizar los controles de paginación
+        function updatePaginationControls(hasNextPage) {
+            prevPageButton.disabled = (currentPage === 1);
+            nextPageButton.disabled = !hasNextPage;
+        }
+
+        // Función para actualizar el estado de un lead
+        async function updateLeadStatus(leadId, newStatus) {
+            checkAuth();
+            const token = getAuthToken();
+            if (!token) return;
+
+            showMessage(`Actualizando lead ${leadId} a ${newStatus}...`, 'info');
+
+            try {
+                const response = await fetch(`/api/leads/${leadId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(`Lead ${leadId} actualizado a ${newStatus} con éxito.`, 'success');
+                    // Opcional: Recargar leads para asegurar que la tabla esté actualizada
+                    // loadLeads(currentPage, pageKeys[currentPage]); // Recarga la página actual
+                } else {
+                    showMessage(`Error al actualizar lead: ${data.message || 'Error desconocido'}`, 'error');
+                    console.error('DEBUG: Error al actualizar lead:', data);
+                    if (response.status === 401 || response.status === 403) {
+                        localStorage.removeItem('jwtToken');
+                        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                    }
+                }
+            } catch (error) {
+                showMessage('Error de conexión al actualizar lead.', 'error');
+                console.error('DEBUG: Error de red/servidor al actualizar lead:', error);
+            }
+        }
+
+        // Event Listeners para paginación
+        prevPageButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                // Para ir a la página anterior, necesitamos la clave de inicio de esa página.
+                // Idealmente, almacenarías las claves de inicio de las páginas anteriores.
+                // Para una paginación simple de "atrás", podríamos recargar desde el inicio
+                // o almacenar un historial de claves. Por simplicidad, recargaremos la página anterior
+                // usando el lastKey de la página anterior.
+                // Esta implementación de paginación reversa con Realtime Database es más compleja
+                // si no se almacena un historial de claves.
+                // Para este ejemplo, simplificamos y cargamos la página anterior si la clave está disponible.
+                loadLeads(currentPage, pageKeys[currentPage]);
+            }
+        });
+
+        nextPageButton.addEventListener('click', () => {
+            if (currentNextPageKey) {
+                currentPage++;
+                pageKeys[currentPage] = currentNextPageKey; // Guarda la clave para la página actual
+                loadLeads(currentPage, currentNextPageKey);
+            }
+        });
+
+        // Inicializar la carga de leads cuando la página se carga
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth(); // Verifica la autenticación al cargar la página
+            loadLeads(currentPage); // Carga la primera página de leads
+        });
+    </script>
+</body>
+</html>
