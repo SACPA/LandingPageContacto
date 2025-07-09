@@ -1,6 +1,3 @@
-// server.js (Tu archivo principal del backend)
-
-// Carga las variables de entorno desde el archivo .env
 require('dotenv').config();
 
 const jwt = require('jsonwebtoken');
