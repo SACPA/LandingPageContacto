@@ -85,11 +85,11 @@
             font-size: 0.9em;
             transition: background-color 0.3s ease;
         }
-        .pagination-controls button:disabled {
+        button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        .pagination-controls button:hover:not(:disabled) {
+        button:hover:not(:disabled) {
             background-color: #0056b3;
         }
         .message {
@@ -162,8 +162,10 @@
         const logoutButton = document.getElementById('logoutButton');
         const messageDiv = document.getElementById('message');
 
-        // URL del backend de Render
-        const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // ¡URL REAL DE RENDER!
+        // --- URLs de la aplicación ---
+        const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // URL de tu backend en Render
+        const FRONTEND_BASE_URL = "https://landingpageidygs92.netlify.app"; // URL de tu frontend en Netlify
+        // ---------------------------
 
         const LEADS_PER_PAGE = 5; // Define cuántos leads mostrar por página
         let currentPage = 1;
@@ -190,9 +192,9 @@
         function checkAuth() {
             const token = getAuthToken();
             if (!token) {
-                // Si no hay token, redirige al login
+                // Si no hay token, redirige al login usando la URL de Netlify
                 alert('No autenticado. Por favor, inicia sesión.');
-                window.location.href = `${BACKEND_URL}/dashboard`; // Redirige a la página de login usando URL de Render
+                window.location.href = `${FRONTEND_BASE_URL}/dashboard`; 
             }
         }
 
@@ -200,7 +202,7 @@
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('jwtToken'); // Elimina el token
             alert('Sesión cerrada.');
-            window.location.href = `${BACKEND_URL}/dashboard`; // Redirige a la página de login usando URL de Render
+            window.location.href = `${FRONTEND_BASE_URL}/dashboard`; // Redirige a la página de login usando la URL de Netlify
         });
 
         // Función para formatear la fecha
@@ -219,7 +221,7 @@
             leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>';
             showMessage('Cargando leads...', 'info');
 
-            let url = `${BACKEND_URL}/api/leads?limit=${LEADS_PER_PAGE}`; // Usando la URL de Render
+            let url = `${BACKEND_URL}/api/leads?limit=${LEADS_PER_PAGE}`; // Llama al backend de Render
             if (startAfterKey) {
                 url += `&startAfterKey=${startAfterKey}`;
             }
@@ -249,7 +251,7 @@
                     if (response.status === 401 || response.status === 403) {
                         // Si el token es inválido/expirado, forzar logout
                         localStorage.removeItem('jwtToken');
-                        setTimeout(() => { window.location.href = `${BACKEND_URL}/dashboard`; }, 1000); // Redirige usando URL de Render
+                        setTimeout(() => { window.location.href = `${FRONTEND_BASE_URL}/dashboard`; }, 1000); // Redirige usando URL de Netlify
                     }
                 }
             } catch (error) {
@@ -319,7 +321,7 @@
             showMessage(`Actualizando lead ${leadId} a ${newStatus}...`, 'info');
 
             try {
-                const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, { // Usando la URL de Render
+                const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, { // Llama al backend de Render
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -339,7 +341,7 @@
                     console.error('DEBUG: Error al actualizar lead:', data);
                     if (response.status === 401 || response.status === 403) {
                         localStorage.removeItem('jwtToken');
-                        setTimeout(() => { window.location.href = `${BACKEND_URL}/dashboard`; }, 1000); // Redirige usando URL de Render
+                        setTimeout(() => { window.location.href = `${FRONTEND_BASE_URL}/dashboard`; }, 1000); // Redirige usando URL de Netlify
                     }
                 }
             } catch (error) {

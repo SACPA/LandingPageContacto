@@ -216,7 +216,6 @@
       </label>
     </div>
 
-    <!-- ¡CLAVE CORREGIDA AQUÍ! -->
     <div class="g-recaptcha" data-sitekey="6LcT5YsrAAAAANLfiCM-kgOU3A3P7mZJJTWUwUfb"></div> 
     <button type="submit">Enviar</button>
   </form>
@@ -278,6 +277,10 @@
     const openTermsModalLink = document.getElementById('openTermsModal');
     const closeTermsModalButton = document.getElementById('closeTermsModal');
 
+    // --- URLs de la aplicación ---
+    const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // URL de tu backend en Render
+    const FRONTEND_BASE_URL = "https://landingpageidygs92.netlify.app"; // URL de tu frontend en Netlify
+    // ---------------------------
 
     function showCustomMessage(text, type = 'error', duration = 5000) {
         customMessageBox.textContent = text;
@@ -349,7 +352,7 @@
       console.log(data);
 
       try {
-        const res = await fetch("https://landingpagecontacto.onrender.com/contact", { // URL de Render
+        const res = await fetch(`${BACKEND_URL}/contact`, { // Llama al backend de Render
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
