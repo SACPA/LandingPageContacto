@@ -13,7 +13,7 @@ const path = require('path');
 const validator = require('validator');
 
 // --- CONFIGURACIÓN DE FIREBASE ADMIN SDK ---
-// ¡CORRECCIÓN AQUÍ! Lee la clave de servicio desde la variable de entorno de Render
+// Lee la clave de servicio desde la variable de entorno de Render
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY); 
 console.log('DEBUG: SERVICE ACCOUNT CARGADA. Project ID:', serviceAccount.project_id);
 
@@ -77,7 +77,7 @@ console.log('DEBUG: CORS configurado para permitir origen:', FRONTEND_URL);
 // -----------------------------------------------------------
 
 // ======================================================================
-// --- RUTAS API (DEFINIDAS ANTES DE SERVIR ARCHIVOS ESTÁTICOS) ---
+// --- RUTAS API ---
 // ======================================================================
 
 // --- RUTA PARA EL FORMULARIO DE CONTACTO ---
@@ -438,25 +438,9 @@ app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
   }
 });
 
-// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (¡DESPUÉS DE RUTAS ESPECÍFICAS!) ---
-// Asegúrate de que 'public' sea el nombre de la carpeta donde moviste tu frontend.
-const publicPath = path.join(__dirname, 'public');
-console.log('DEBUG: Configurando el servidor de archivos estáticos desde:', publicPath); // Nuevo log
-app.use(express.static(publicPath));
-
-// Rutas explícitas para servir los archivos HTML principales
-app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
-});
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(publicPath, 'dashboard.html'));
-});
-app.get('/crm', (req, res) => {
-  res.sendFile(path.join(publicPath, 'crm.html'));
-});
 // -----------------------------------------------------------------------------
 
 app.listen(port, () => {
   console.log(`Servidor backend escuchando en http://localhost:${port}`);
-  console.log(`Frontend disponible en: http://localhost:${port}/index.html`);
+  // Ya no servimos el frontend desde aquí, Render solo es el backend API
 });
