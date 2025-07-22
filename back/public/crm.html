@@ -155,13 +155,15 @@
     </div>
 
     <script>
-        const BACKEND_URL = "https://tu-backend-de-render.onrender.com";
         const leadsTableBody = document.getElementById('leadsTableBody');
         const prevPageButton = document.getElementById('prevPageButton');
         const nextPageButton = document.getElementById('nextPageButton');
         const currentPageInfo = document.getElementById('currentPageInfo');
         const logoutButton = document.getElementById('logoutButton');
         const messageDiv = document.getElementById('message');
+
+        // URL del backend de Render
+        const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // ¡URL REAL DE RENDER!
 
         const LEADS_PER_PAGE = 5; // Define cuántos leads mostrar por página
         let currentPage = 1;
@@ -190,7 +192,7 @@
             if (!token) {
                 // Si no hay token, redirige al login
                 alert('No autenticado. Por favor, inicia sesión.');
-                window.location.href = '/dashboard'; // Redirige a la página de login
+                window.location.href = `${BACKEND_URL}/dashboard`; // Redirige a la página de login usando URL de Render
             }
         }
 
@@ -198,7 +200,7 @@
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('jwtToken'); // Elimina el token
             alert('Sesión cerrada.');
-            window.location.href = '/dashboard'; // Redirige a la página de login
+            window.location.href = `${BACKEND_URL}/dashboard`; // Redirige a la página de login usando URL de Render
         });
 
         // Función para formatear la fecha
@@ -217,13 +219,13 @@
             leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>';
             showMessage('Cargando leads...', 'info');
 
-            let url = `${BACKEND_URL}/api/leads?limit=${LEADS_PER_PAGE}`;
+            let url = `${BACKEND_URL}/api/leads?limit=${LEADS_PER_PAGE}`; // Usando la URL de Render
             if (startAfterKey) {
                 url += `&startAfterKey=${startAfterKey}`;
             }
 
             try {
-                const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, {
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -247,7 +249,7 @@
                     if (response.status === 401 || response.status === 403) {
                         // Si el token es inválido/expirado, forzar logout
                         localStorage.removeItem('jwtToken');
-                        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                        setTimeout(() => { window.location.href = `${BACKEND_URL}/dashboard`; }, 1000); // Redirige usando URL de Render
                     }
                 }
             } catch (error) {
@@ -317,7 +319,7 @@
             showMessage(`Actualizando lead ${leadId} a ${newStatus}...`, 'info');
 
             try {
-                const response = await fetch(`/api/leads/${leadId}`, {
+                const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, { // Usando la URL de Render
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -337,7 +339,7 @@
                     console.error('DEBUG: Error al actualizar lead:', data);
                     if (response.status === 401 || response.status === 403) {
                         localStorage.removeItem('jwtToken');
-                        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                        setTimeout(() => { window.location.href = `${BACKEND_URL}/dashboard`; }, 1000); // Redirige usando URL de Render
                     }
                 }
             } catch (error) {
@@ -350,14 +352,6 @@
         prevPageButton.addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
-                // Para ir a la página anterior, necesitamos la clave de inicio de esa página.
-                // Idealmente, almacenarías las claves de inicio de las páginas anteriores.
-                // Para una paginación simple de "atrás", podríamos recargar desde el inicio
-                // o almacenar un historial de claves. Por simplicidad, recargaremos la página anterior
-                // usando el lastKey de la página anterior.
-                // Esta implementación de paginación reversa con Realtime Database es más compleja
-                // si no se almacena un historial de claves.
-                // Para este ejemplo, simplificamos y cargamos la página anterior si la clave está disponible.
                 loadLeads(currentPage, pageKeys[currentPage]);
             }
         });
