@@ -11,54 +11,192 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh; 
+      margin: 0;
+      padding: 20px; 
+      box-sizing: border-box;
     }
     form {
       background: white;
       padding: 30px;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      width: 300px;
+      width: 100%; 
+      max-width: 400px; 
+      box-sizing: border-box;
     }
     h2 {
       margin-bottom: 20px;
       text-align: center;
+      color: #333;
     }
     input[type="text"],
     input[type="email"],
     input[type="tel"],
     textarea {
-      width: 100%;
+      width: calc(100% - 20px); 
       padding: 10px;
       margin: 10px 0;
       border: 1px solid #ddd;
       border-radius: 5px;
+      box-sizing: border-box; 
+    }
+    textarea {
+        resize: vertical; 
+        min-height: 80px; 
     }
     .privacy-checkbox {
       display: flex;
-      align-items: center;
+      align-items: flex-start; 
       margin: 10px 0 20px 0;
     }
     .privacy-checkbox input[type="checkbox"] {
       width: auto;
+      margin-top: 4px; 
       margin-right: 8px;
     }
     .privacy-checkbox label {
       font-size: 0.9em;
       color: #555;
+      flex-grow: 1; 
+    }
+
+    .privacy-link {
+        color: #007BFF; 
+        text-decoration: underline; 
+        cursor: pointer; 
+    }
+    .privacy-link:hover {
+        color: #0056b3; 
     }
     button {
-      width: 100%;
+      width: 20%;
       background: #007BFF;
       color: white;
       border: none;
-      padding: 10px;
+      padding: 12px; 
       border-radius: 5px;
       cursor: pointer;
       margin-top: 15px; 
+      font-size: 1.1em; 
+      transition: background 0.3s ease; 
     }
     button:hover {
       background: #0056b3;
+    }
+    .g-recaptcha {
+        margin-top: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: center; 
+    }
+
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6); 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000; 
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .modal-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+    .modal-content {
+        background-color: white;
+        padding: 25px;
+        border-radius: 10px;
+        max-width: 600px; 
+        width: 90%; 
+        max-height: 90vh; 
+        overflow-y: auto; 
+        position: relative;
+        transform: translateY(20px); 
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+    .modal-overlay.show .modal-content {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    .modal-header h3 {
+        margin: 0;
+        color: #007BFF;
+        font-size: 1.4em;
+    }
+    .modal-close-button {
+        background: none;
+        border: none;
+        font-size: 1.4em; 
+        cursor: pointer;
+        color: #666;
+        transition: color 0.2s ease;
+    }
+    .modal-close-button:hover {
+        color: #333;
+    }
+    .modal-body h4 {
+        color: #007BFF;
+        margin-top: 15px;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+    }
+    .modal-body p, .modal-body ul {
+        margin-bottom: 10px;
+        font-size: 0.95em;
+        line-height: 1.5;
+    }
+    .modal-body ul {
+        list-style: disc;
+        margin-left: 20px;
+    }
+
+
+    .custom-message-box {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        z-index: 1001; 
+        display: none; 
+        font-weight: bold;
+        text-align: center;
+        min-width: 250px;
+        max-width: 90%;
+    }
+    .custom-message-box.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .custom-message-box.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
     }
   </style>
   <script src="https://www.google.com/recaptcha/api.js" async defer></script>
@@ -73,15 +211,143 @@
 
     <div class="privacy-checkbox">
       <input type="checkbox" id="privacyConsent" name="privacyConsent" required />
-      <label for="privacyConsent">Acepto el <a href="#" target="_blank">Aviso de Privacidad</a> y los <a href="#" target="_blank">Términos y Condiciones</a></label>
+      <label for="privacyConsent">
+        Acepto el <span class="privacy-link" id="openPrivacyModal">Aviso de Privacidad</span> y los <span class="privacy-link" id="openTermsModal">Términos y Condiciones</span>
+      </label>
     </div>
 
     <div class="g-recaptcha" data-sitekey="6LeobmsrAAAAAAeCARL86OWODLpWtamP3Bbk0QES"></div>
     <button type="submit">Enviar</button>
   </form>
 
+
+  <div id="customMessageBox" class="custom-message-box"></div>
+
+
+  <div class="modal-overlay" id="privacyModalOverlay">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h3>Aviso de Privacidad</h3>
+              <button class="modal-close-button" id="closePrivacyModal">&times;</button>
+          </div>
+          <div class="modal-body">
+              <h4>Información Recopilada</h4>
+              <p>Recopilamos su nombre, correo electrónico, teléfono y mensaje para poder responder a sus consultas y brindarle el servicio solicitado. También recopilamos su consentimiento para el aviso de privacidad y un token de reCAPTCHA para verificar que no es un robot.</p>
+
+              <h4>Uso de la Información</h4>
+              <p>La información recopilada se utiliza exclusivamente para:</p>
+              <ul>
+                  <li>Contactarlo y dar seguimiento a su solicitud.</li>
+                  <li>Proveer los servicios y productos que ha solicitado.</li>
+                  <li>Informarle sobre cambios o nuevos productos/servicios relacionados.</li>
+                  <li>Cumplir con las obligaciones legales y contractuales.</li>
+              </ul>
+
+              <h4>Protección de Datos</h4>
+              <p>Sus datos personales están protegidos y no serán compartidos con terceros sin su consentimiento, salvo las excepciones previstas por la ley. Implementamos medidas de seguridad administrativas, técnicas y físicas para proteger sus datos contra daño, pérdida, alteración, destrucción o el uso, acceso o tratamiento no autorizado.</p>
+
+              <h4>Derechos ARCO</h4>
+              <p>Usted tiene derecho a acceder, rectificar, cancelar u oponerse al tratamiento de sus datos personales (Derechos ARCO). Para ejercer cualquiera de estos derechos, por favor contáctenos a través de [correo electrónico de contacto o formulario específico].</p>
+
+              <h4>Cambios al Aviso de Privacidad</h4>
+              <p>Este aviso de privacidad puede ser modificado o actualizado periódicamente. Le recomendamos revisar esta sección regularmente para estar al tanto de las actualizaciones.</p>
+          </div>
+      </div>
+  </div>
+
+  <!-- Modal para Términos y Condiciones -->
+  <div class="modal-overlay" id="termsModalOverlay">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h3>Términos y Condiciones</h3>
+              <button class="modal-close-button" id="closeTermsModal">&times;</button>
+          </div>
+          <div class="modal-body">
+              <h4>Aceptación de los Términos</h4>
+              <p>Al utilizar este formulario de contacto, usted acepta estar sujeto a estos Términos y Condiciones, así como a todas las leyes y regulaciones aplicables. Si no está de acuerdo con alguno de estos términos, le pedimos que no utilice este formulario.</p>
+
+              <h4>Uso del Formulario</h4>
+              <p>Este formulario está diseñado para facilitar la comunicación entre usted y [Tu Empresa/Nombre]. Se prohíbe el uso de este formulario para fines ilegales, fraudulentos, difamatorios, obscenos o cualquier otro propósito que viole la ley o los derechos de terceros.</p>
+
+              <h4>Información Proporcionada</h4>
+              <p>Usted es responsable de la exactitud y veracidad de la información que proporciona a través de este formulario. Nos reservamos el derecho de no responder a solicitudes con información incompleta o falsa.</p>
+
+              <h4>Propiedad Intelectual</h4>
+              <p>Todo el contenido y materiales disponibles en este sitio web, incluyendo textos, gráficos, logotipos, iconos, imágenes, clips de audio, descargas digitales y compilaciones de datos, son propiedad de [Tu Empresa/Nombre] o de sus proveedores de contenido y están protegidos por leyes de derechos de autor.</p>
+
+              <h4>Limitación de Responsabilidad</h4>
+              <p>[Tu Empresa/Nombre] no será responsable por ningún daño directo, indirecto, incidental, consecuencial o especial que resulte del uso o la imposibilidad de usar este formulario.</p>
+
+              <h4>Modificaciones</h4>
+              <p>Nos reservamos el derecho de modificar estos Términos y Condiciones en cualquier momento. Cualquier cambio será efectivo inmediatamente después de su publicación en este sitio web. Se recomienda revisar esta página periódicamente para estar al tanto de las actualizaciones.</p>
+          </div>
+      </div>
+  </div>
+
   <script>
     const form = document.getElementById("contactForm");
+    const customMessageBox = document.getElementById("customMessageBox");
+
+
+    const privacyModalOverlay = document.getElementById('privacyModalOverlay');
+    const openPrivacyModalLink = document.getElementById('openPrivacyModal');
+    const closePrivacyModalButton = document.getElementById('closePrivacyModal');
+
+
+    const termsModalOverlay = document.getElementById('termsModalOverlay');
+    const openTermsModalLink = document.getElementById('openTermsModal');
+    const closeTermsModalButton = document.getElementById('closeTermsModal');
+
+
+    function showCustomMessage(text, type = 'error', duration = 5000) {
+        customMessageBox.textContent = text;
+        customMessageBox.className = `custom-message-box ${type}`;
+        customMessageBox.style.display = 'block';
+        setTimeout(() => {
+            customMessageBox.style.display = 'none';
+        }, duration);
+    }
+
+
+    function openModal(modalOverlay) {
+        modalOverlay.classList.add('show');
+        document.body.style.overflow = 'hidden'; 
+    }
+
+
+    function closeModal(modalOverlay) {
+        modalOverlay.classList.remove('show');
+        document.body.style.overflow = ''; 
+    }
+
+
+    openPrivacyModalLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal(privacyModalOverlay);
+    });
+    closePrivacyModalButton.addEventListener('click', () => {
+        closeModal(privacyModalOverlay);
+    });
+    privacyModalOverlay.addEventListener('click', (e) => {
+        if (e.target === privacyModalOverlay) {
+            closeModal(privacyModalOverlay);
+        }
+    });
+
+
+    openTermsModalLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal(termsModalOverlay);
+    });
+    closeTermsModalButton.addEventListener('click', () => {
+        closeModal(termsModalOverlay);
+    });
+    termsModalOverlay.addEventListener('click', (e) => {
+        if (e.target === termsModalOverlay) {
+            closeModal(termsModalOverlay);
+        }
+    });
+
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -91,12 +357,10 @@
 
       data.privacyConsent = document.getElementById("privacyConsent").checked;
 
-
       const recaptchaResponse = grecaptcha.getResponse();
 
-     
       if (!recaptchaResponse) {
-        alert("Por favor, completa el CAPTCHA.");
+        showCustomMessage("Por favor, completa el CAPTCHA.", 'error');
         return; 
       }
 
@@ -112,17 +376,17 @@
         });
 
         if (res.ok) {
-          alert("Mensaje enviado con éxito.");
+          showCustomMessage("Mensaje enviado con éxito.", 'success');
           form.reset();
           grecaptcha.reset(); 
         } else {
           const errorData = await res.json();
-          alert(`Error al enviar el mensaje: ${errorData.message || 'Error desconocido'}`);
+          showCustomMessage(`Error al enviar el mensaje: ${errorData.message || 'Error desconocido'}`, 'error');
           grecaptcha.reset(); 
         }
       } catch (error) {
         console.error("Error de red o del servidor:", error);
-        alert("Hubo un problema de conexión. Inténtalo de nuevo más tarde.");
+        showCustomMessage("Hubo un problema de conexión. Inténtalo de nuevo más tarde.", 'error');
         grecaptcha.reset(); 
       }
     });
