@@ -1,7 +1,10 @@
+// server.js (Tu archivo principal del backend)
+
+// Carga las variables de entorno desde el archivo .env
 require('dotenv').config();
 
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken'); // Importa la librería JWT
+const bcrypt = require('bcrypt');     // Importa la librería bcrypt
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
@@ -10,7 +13,8 @@ const path = require('path');
 const validator = require('validator');
 
 // --- CONFIGURACIÓN DE FIREBASE ADMIN SDK ---
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+// ¡CORRECCIÓN AQUÍ! Lee la clave de servicio desde la variable de entorno de Render
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY); 
 console.log('DEBUG: SERVICE ACCOUNT CARGADA. Project ID:', serviceAccount.project_id);
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -59,263 +63,24 @@ if (!DISCORD_WEBHOOK_URL) {
 const app = express();
 const port = 3000;
 
-// --- MIDDLEWARES ---
+// --- MIDDLEWARES (Orden importante: JSON y CORS primero) ---
+app.use(express.json()); // Necesario para parsear el body de las solicitudes POST/PUT
 const FRONTEND_URL = process.env.FRONTEND_URL;
 if (!FRONTEND_URL) {
   console.error('ERROR: La variable de entorno FRONTEND_URL no está definida en .env');
   process.exit(1);
 }
-
 app.use(cors({
   origin: FRONTEND_URL
 }));
 console.log('DEBUG: CORS configurado para permitir origen:', FRONTEND_URL);
+// -----------------------------------------------------------
 
-app.use(express.json());
+// ======================================================================
+// --- RUTAS API (DEFINIDAS ANTES DE SERVIR ARCHIVOS ESTÁTICOS) ---
+// ======================================================================
 
-// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
-app.use(express.static(path.join(__dirname, 'public')));
-console.log('DEBUG: Sirviendo archivos estáticos desde:', path.join(__dirname, 'public'));
-
-// Ruta GET para servir index.html cuando se accede a la raíz del servidor
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Ruta GET para servir el dashboard.html (página de login del CRM)
-app.get('/dashboard', (req, res) => {
-  console.log('DEBUG: Sirviendo dashboard.html (página de login)');
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-// Ruta GET para servir el crm.html (dashboard principal del CRM)
-app.get('/crm', (req, res) => {
-  console.log('DEBUG: Sirviendo crm.html (dashboard principal)');
-  res.sendFile(path.join(__dirname, 'public', 'crm.html'));
-});
-// --------------------------------------------
-
-// --- MIDDLEWARE DE AUTENTICACIÓN JWT ---
-const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-      if (err) {
-        console.warn('DEBUG WARNING: Token JWT inválido o expirado:', err.message);
-        return res.status(403).json({ message: 'Acceso denegado: Token inválido o expirado.' });
-      }
-      req.user = user;
-      console.log('DEBUG: Token JWT verificado. Usuario:', req.user.username);
-      next();
-    });
-  } else {
-    console.warn('DEBUG WARNING: Acceso denegado: No se proporcionó token JWT.');
-    res.status(401).json({ message: 'Acceso denegado: No se proporcionó token de autenticación.' });
-  }
-};
-// ---------------------------------------
-
-// --- RUTAS DE AUTENTICACIÓN (LOGIN/REGISTER) ---
-app.post('/admin/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Nombre de usuario y contraseña son requeridos.' });
-    }
-    if (!validator.isAlphanumeric(username)) {
-        return res.status(400).json({ message: 'El nombre de usuario solo puede contener letras y números.' });
-    }
-
-    const db = admin.database();
-    const usersRef = db.ref('users');
-
-    const snapshot = await usersRef.orderByChild('username').equalTo(username).once('value');
-    if (snapshot.exists()) {
-      console.warn('DEBUG WARNING: Intento de registro de usuario existente:', username);
-      return res.status(409).json({ message: 'El nombre de usuario ya existe.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, HASH_SALT_ROUNDS);
-    console.log('DEBUG: Contraseña hasheada.');
-
-    await usersRef.push({
-      username: username,
-      password: hashedPassword,
-      role: 'admin',
-      createdAt: admin.database.ServerValue.TIMESTAMP
-    });
-    console.log('DEBUG: Usuario registrado con éxito:', username);
-
-    res.status(201).json({ message: 'Usuario administrador registrado con éxito.' });
-
-  } catch (error) {
-    console.error('DEBUG CRITICAL ERROR: Error al registrar usuario:', error);
-    res.status(500).json({ message: 'Error interno del servidor al registrar usuario.' });
-  }
-});
-
-app.post('/admin/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Nombre de usuario y contraseña son requeridos.' });
-    }
-
-    const db = admin.database();
-    const usersRef = db.ref('users');
-
-    const snapshot = await usersRef.orderByChild('username').equalTo(username).once('value');
-
-    if (!snapshot.exists()) {
-      console.warn('DEBUG WARNING: Intento de login fallido: Usuario no encontrado:', username);
-      return res.status(401).json({ message: 'Credenciales inválidas.' });
-    }
-
-    const userData = snapshot.val();
-    const userId = Object.keys(userData)[0];
-    const user = userData[userId];
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      console.warn('DEBUG WARNING: Intento de login fallido: Contraseña incorrecta para usuario:', username);
-      return res.status(401).json({ message: 'Credenciales inválidas.' });
-    }
-
-    const token = jwt.sign(
-      { userId: userId, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-    console.log('DEBUG: Usuario logueado con éxito. JWT generado para:', username);
-
-    res.status(200).json({ message: 'Login exitoso.', token: token });
-
-  } catch (error) {
-    console.error('DEBUG CRITICAL ERROR: Error al intentar login:', error);
-    res.status(500).json({ message: 'Error interno del servidor al iniciar sesión.' });
-  }
-});
-
-// --- RUTA PROTEGIDA DE EJEMPLO (para probar el middleware JWT) ---
-app.get('/api/protected-test', authenticateJWT, (req, res) => {
-  console.log('DEBUG: Acceso a ruta protegida exitoso para usuario:', req.user.username);
-  res.status(200).json({
-    message: '¡Acceso a recurso protegido exitoso!',
-    user: req.user
-  });
-});
-// -----------------------------------------------------------------
-
-// --- RUTAS PARA LA API DE LEADS DEL CRM (PROTEGIDAS) ---
-app.get('/api/leads', authenticateJWT, async (req, res) => {
-  try {
-    const db = admin.database();
-    const leadsRef = db.ref('contacts');
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-    const offset = (page - 1) * limit;
-
-    console.log(`DEBUG: Solicitud de leads - Página: ${page}, Límite: ${limit}, Offset: ${offset}`);
-
-    let query = leadsRef.orderByKey();
-
-    if (req.query.startAfterKey) {
-      query = query.startAt(req.query.startAfterKey);
-      console.log('DEBUG: Paginación usando startAfterKey:', req.query.startAfterKey);
-    } else {
-      console.log('DEBUG: Paginación sin startAfterKey (primera página o reinicio).');
-    }
-
-    const snapshot = await query.limitToFirst(limit + 1).once('value');
-    const leadsData = snapshot.val();
-
-    let leadsArray = [];
-    let lastKey = null;
-    let hasNextPage = false;
-
-    if (leadsData) {
-      const allKeys = Object.keys(leadsData);
-      const leadsToDisplayKeys = allKeys.slice(0, limit);
-
-      leadsToDisplayKeys.forEach(key => {
-        leadsArray.push({ id: key, ...leadsData[key] });
-      });
-
-      if (allKeys.length > limit) {
-        hasNextPage = true;
-        lastKey = leadsToDisplayKeys[leadsToDisplayKeys.length - 1];
-      }
-    }
-
-    console.log(`DEBUG: Se encontraron ${leadsArray.length} leads para la página ${page}. Hay siguiente página: ${hasNextPage}`);
-
-    res.status(200).json({
-      leads: leadsArray,
-      pagination: {
-        page: page,
-        limit: limit,
-        hasNextPage: hasNextPage,
-        nextPageKey: hasNextPage ? lastKey : null
-      }
-    });
-
-  } catch (error) {
-    console.error('DEBUG CRITICAL ERROR: Error al obtener leads:', error);
-    res.status(500).json({ message: 'Error interno del servidor al obtener leads.' });
-  }
-});
-
-// Ruta para ACTUALIZAR EL ESTADO DE UN LEAD
-app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
-  try {
-    const leadId = req.params.id;
-    const { status } = req.body;
-
-    // --- CAMBIO AQUÍ: Permitir el guion en la validación del ID ---
-    // Los IDs de Realtime Database pueden contener guiones, así que ajustamos la regex.
-    // Usamos una regex para permitir alfanuméricos y guiones.
-    const firebaseIdRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!leadId || !firebaseIdRegex.test(leadId)) {
-      console.warn('DEBUG WARNING: ID de lead inválido o no cumple el formato esperado:', leadId);
-      return res.status(400).json({ message: 'ID de lead inválido o formato incorrecto.' });
-    }
-    // ----------------------------------------------------------------
-
-    const validStatuses = ['Nuevo', 'Contactado', 'Descartado'];
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ message: `Estado inválido. Los estados permitidos son: ${validStatuses.join(', ')}.` });
-    }
-
-    const db = admin.database();
-    const leadRef = db.ref(`contacts/${leadId}`);
-
-    const snapshot = await leadRef.once('value');
-    if (!snapshot.exists()) {
-      console.warn('DEBUG WARNING: Intento de actualizar lead no existente:', leadId);
-      return res.status(404).json({ message: 'Lead no encontrado.' });
-    }
-
-    await leadRef.update({ status: status });
-    console.log(`DEBUG: Estado del lead ${leadId} actualizado a: ${status}`);
-
-    res.status(200).json({ message: 'Estado del lead actualizado con éxito.' });
-
-  } catch (error) {
-    console.error('DEBUG CRITICAL ERROR: Error al actualizar el estado del lead:', error);
-    res.status(500).json({ message: 'Error interno del servidor al actualizar el lead.' });
-  }
-});
-// -----------------------------------------------------------------
-
-
-// --- RUTA EXISTENTE: CONTACTO (recepción de leads) ---
+// --- RUTA PARA EL FORMULARIO DE CONTACTO ---
 app.post('/contact', async (req, res) => {
   try {
     let { name, email, phone, message, privacyConsent, recaptchaToken } = req.body;
@@ -398,7 +163,7 @@ app.post('/contact', async (req, res) => {
     });
     console.log('DEBUG: Datos guardados en Realtime Database con éxito.');
 
-    // --- NUEVA SECCIÓN: ENVIAR NOTIFICACIÓN POR DISCORD WEBHOOK ---
+    // --- SECCIÓN DE NOTIFICACIÓN POR DISCORD WEBHOOK ---
     if (DISCORD_WEBHOOK_URL) {
       try {
         const discordMessage = {
@@ -452,6 +217,244 @@ app.post('/contact', async (req, res) => {
   }
 });
 
+// --- MIDDLEWARE DE AUTENTICACIÓN JWT ---
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (err) {
+        console.warn('DEBUG WARNING: Token JWT inválido o expirado:', err.message);
+        return res.status(403).json({ message: 'Acceso denegado: Token inválido o expirado.' });
+      }
+      req.user = user;
+      console.log('DEBUG: Token JWT verificado. Usuario:', req.user.username);
+      next();
+    });
+  } else {
+    console.warn('DEBUG WARNING: Acceso denegado: No se proporcionó token JWT.');
+    res.status(401).json({ message: 'Acceso denegado: No se proporcionó token de autenticación.' });
+  }
+};
+// ---------------------------------------
+
+// --- RUTAS DE AUTENTICACIÓN (LOGIN/REGISTER) ---
+app.post('/admin/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Nombre de usuario y contraseña son requeridos.' });
+    }
+    if (!validator.isAlphanumeric(username)) {
+        return res.status(400).json({ message: 'El nombre de usuario solo puede contener letras y números.' });
+    }
+    const db = admin.database();
+    const usersRef = db.ref('users');
+    const snapshot = await usersRef.orderByChild('username').equalTo(username).once('value');
+    if (snapshot.exists()) {
+      console.warn('DEBUG WARNING: Intento de registro de usuario existente:', username);
+      return res.status(409).json({ message: 'El nombre de usuario ya existe.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, HASH_SALT_ROUNDS);
+    await usersRef.push({
+      username: username,
+      password: hashedPassword,
+      role: 'admin',
+      createdAt: admin.database.ServerValue.TIMESTAMP
+    });
+    console.log('DEBUG: Usuario registrado con éxito:', username);
+    res.status(201).json({ message: 'Usuario administrador registrado con éxito.' });
+  } catch (error) {
+    console.error('DEBUG CRITICAL ERROR: Error al registrar usuario:', error);
+    res.status(500).json({ message: 'Error interno del servidor al registrar usuario.' });
+  }
+});
+
+app.post('/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Nombre de usuario y contraseña son requeridos.' });
+    }
+    const db = admin.database();
+    const usersRef = db.ref('users');
+    const snapshot = await usersRef.orderByChild('username').equalTo(username).once('value');
+    if (!snapshot.exists()) {
+      console.warn('DEBUG WARNING: Intento de login fallido: Usuario no encontrado:', username);
+      return res.status(401).json({ message: 'Credenciales inválidas.' });
+    }
+    const userData = snapshot.val();
+    const userId = Object.keys(userData)[0];
+    const user = userData[userId];
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      console.warn('DEBUG WARNING: Intento de login fallido: Contraseña incorrecta para usuario:', username);
+      return res.status(401).json({ message: 'Credenciales inválidas.' });
+    }
+    const token = jwt.sign(
+      { userId: userId, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    console.log('DEBUG: Usuario logueado con éxito. JWT generado para:', username);
+    res.status(200).json({ message: 'Login exitoso.', token: token });
+  } catch (error) {
+    console.error('DEBUG CRITICAL ERROR: Error al intentar login:', error);
+    res.status(500).json({ message: 'Error interno del servidor al iniciar sesión.' });
+  }
+});
+
+app.get('/api/protected-test', authenticateJWT, (req, res) => {
+  console.log('DEBUG: Acceso a ruta protegida exitoso para usuario:', req.user.username);
+  res.status(200).json({
+    message: '¡Acceso a recurso protegido exitoso!',
+    user: req.user
+  });
+});
+// -----------------------------------------------------------------
+
+// --- RUTAS PARA LA API DE LEADS DEL CRM (PROTEGIDAS) ---
+
+// Ruta para OBTENER TODOS LOS LEADS con paginación
+app.get('/api/leads', authenticateJWT, async (req, res) => {
+  try {
+    const db = admin.database();
+    const leadsRef = db.ref('contacts'); // Tu colección de leads
+
+    // Parámetros de paginación desde la query string (ej. /api/leads?page=1&limit=10)
+    const page = parseInt(req.query.page) || 1; // Página actual, por defecto 1
+    const limit = parseInt(req.query.limit) || 5; // Leads por página, por defecto 5
+    const offset = (page - 1) * limit; // Calcular el offset
+
+    console.log(`DEBUG BACKEND: Solicitud de leads - Página: ${page}, Límite: ${limit}, Offset: ${offset}`);
+
+    let query = leadsRef.orderByKey(); // Ordena por la clave (ID del lead)
+
+    // Si hay un startAfterKey (para paginación basada en cursor), úsalo
+    if (req.query.startAfterKey) {
+      query = query.startAt(req.query.startAfterKey); // Inicia *en* la clave proporcionada
+      console.log('DEBUG BACKEND: Paginación usando startAt con clave:', req.query.startAfterKey);
+    } else {
+      // Para la primera página o si no hay startAfterKey, simplemente limita
+      console.log('DEBUG BACKEND: Paginación sin startAfterKey (primera página o reinicio).');
+    }
+
+    // Obtener un elemento más para saber si hay una siguiente página
+    const snapshot = await query.limitToFirst(limit + 1).once('value');
+    const leadsData = snapshot.val();
+
+    let leadsArray = [];
+    let lastKey = null;
+    let hasNextPage = false;
+
+    if (leadsData) {
+      // Convierte el objeto de leads en un array de objetos con sus IDs
+      const allKeys = Object.keys(leadsData);
+      console.log('DEBUG BACKEND: Todas las claves obtenidas de Firebase (orden ascendente):', allKeys);
+      
+      // Si startAfterKey fue usado, el primer elemento de allKeys es el startAfterKey mismo.
+      // Lo removemos para que no se duplique en la página actual.
+      let leadsToProcess = allKeys;
+      if (req.query.startAfterKey && allKeys.length > 0 && allKeys[0] === req.query.startAfterKey) {
+          leadsToProcess = allKeys.slice(1);
+          console.log('DEBUG BACKEND: Se eliminó el startAfterKey del inicio. Claves a procesar:', leadsToProcess);
+      } else {
+          console.log('DEBUG BACKEND: No se eliminó startAfterKey. Claves a procesar:', leadsToProcess);
+      }
+
+      const leadsToDisplayKeys = leadsToProcess.slice(0, limit); // Toma solo los leads de la página actual
+
+      leadsToDisplayKeys.forEach(key => {
+        leadsArray.push({ id: key, ...leadsData[key] });
+      });
+
+      // Invertir el array para que los más recientes aparezcan primero en el frontend
+      leadsArray.reverse();
+
+      // Determina si hay una siguiente página
+      if (leadsToProcess.length > limit) {
+        hasNextPage = true;
+        // La clave del último lead en esta página (antes de invertir)
+        lastKey = leadsToProcess[limit - 1]; 
+        console.log('DEBUG BACKEND: Hay siguiente página. lastKey calculado:', lastKey);
+      }
+    }
+
+    console.log(`DEBUG BACKEND: Se encontraron ${leadsArray.length} leads para la página ${page}. Hay siguiente página: ${hasNextPage}`);
+
+    res.status(200).json({
+      leads: leadsArray,
+      pagination: {
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+        nextPageKey: hasNextPage ? lastKey : null // Clave para la siguiente página
+      }
+    });
+
+  } catch (error) {
+    console.error('DEBUG CRITICAL ERROR: Error al obtener leads:', error);
+    res.status(500).json({ message: 'Error interno del servidor al obtener leads.' });
+  }
+});
+
+// Ruta para ACTUALIZAR EL ESTADO DE UN LEAD
+app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
+  try {
+    const leadId = req.params.id;
+    const { status } = req.body;
+
+    // Permitir el guion en la validación del ID
+    const firebaseIdRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!leadId || !firebaseIdRegex.test(leadId)) {
+      console.warn('DEBUG WARNING: ID de lead inválido o no cumple el formato esperado:', leadId);
+      return res.status(400).json({ message: 'ID de lead inválido o formato incorrecto.' });
+    }
+
+    const validStatuses = ['Nuevo', 'Contactado', 'Descartado'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ message: `Estado inválido. Los estados permitidos son: ${validStatuses.join(', ')}.` });
+    }
+
+    const db = admin.database();
+    const leadRef = db.ref(`contacts/${leadId}`);
+
+    const snapshot = await leadRef.once('value');
+    if (!snapshot.exists()) {
+      console.warn('DEBUG WARNING: Intento de actualizar lead no existente:', leadId);
+      return res.status(404).json({ message: 'Lead no encontrado.' });
+    }
+
+    await leadRef.update({ status: status });
+    console.log(`DEBUG: Estado del lead ${leadId} actualizado a: ${status}`);
+
+    res.status(200).json({ message: 'Estado del lead actualizado con éxito.' });
+
+  } catch (error) {
+    console.error('DEBUG CRITICAL ERROR: Error al actualizar el estado del lead:', error);
+    res.status(500).json({ message: 'Error interno del servidor al actualizar el lead.' });
+  }
+});
+
+// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (¡DESPUÉS DE RUTAS ESPECÍFICAS!) ---
+// Asegúrate de que 'public' sea el nombre de la carpeta donde moviste tu frontend.
+const publicPath = path.join(__dirname, 'public');
+console.log('DEBUG: Configurando el servidor de archivos estáticos desde:', publicPath); // Nuevo log
+app.use(express.static(publicPath));
+
+// Rutas explícitas para servir los archivos HTML principales
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(publicPath, 'dashboard.html'));
+});
+app.get('/crm', (req, res) => {
+  res.sendFile(path.join(publicPath, 'crm.html'));
+});
+// -----------------------------------------------------------------------------
 
 app.listen(port, () => {
   console.log(`Servidor backend escuchando en http://localhost:${port}`);
