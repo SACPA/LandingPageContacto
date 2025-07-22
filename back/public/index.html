@@ -264,6 +264,7 @@
   </div>
 
   <script>
+    const BACKEND_URL = "https://tu-backend-de-render.onrender.com"; 
     const form = document.getElementById("contactForm");
     const customMessageBox = document.getElementById("customMessageBox");
 
@@ -348,7 +349,7 @@
       console.log(data);
 
       try {
-        const res = await fetch("http://localhost:3000/contact", {
+          const res = await fetch(`${BACKEND_URL}/contact`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),

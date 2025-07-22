@@ -10,7 +10,7 @@ const path = require('path');
 const validator = require('validator');
 
 // --- CONFIGURACIÓN DE FIREBASE ADMIN SDK ---
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 console.log('DEBUG: SERVICE ACCOUNT CARGADA. Project ID:', serviceAccount.project_id);
 
 const DATABASE_URL = process.env.DATABASE_URL;

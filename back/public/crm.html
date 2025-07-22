@@ -155,6 +155,7 @@
     </div>
 
     <script>
+        const BACKEND_URL = "https://tu-backend-de-render.onrender.com";
         const leadsTableBody = document.getElementById('leadsTableBody');
         const prevPageButton = document.getElementById('prevPageButton');
         const nextPageButton = document.getElementById('nextPageButton');
@@ -216,13 +217,13 @@
             leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>';
             showMessage('Cargando leads...', 'info');
 
-            let url = `/api/leads?limit=${LEADS_PER_PAGE}`;
+            let url = `${BACKEND_URL}/api/leads?limit=${LEADS_PER_PAGE}`;
             if (startAfterKey) {
                 url += `&startAfterKey=${startAfterKey}`;
             }
 
             try {
-                const response = await fetch(url, {
+                const response = await fetch(`${BACKEND_URL}/api/leads/${leadId}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
