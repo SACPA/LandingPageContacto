@@ -6,6 +6,7 @@ node_modules/
 
 # Ignorar el archivo de la clave de servicio de Firebase Admin SDK (MUY IMPORTANTE para seguridad)
 # Asegúrate de que la ruta sea correcta si lo tienes en una subcarpeta.
+back/serviceAccountKey.json
 
 # Ignorar archivos de logs
 *.log
