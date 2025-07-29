@@ -6,10 +6,6 @@
     .env
     back/.env
 
-    # Firebase Service Account Key (VERY IMPORTANT: DO NOT COMMIT THIS!)
-    serviceAccountKey.json
-    back/serviceAccountKey.json
-
     # Logs
     *.log
     npm-debug.log*
