@@ -1,0 +1,9 @@
+node_modules/
+.git/
+.vscode/
+npm-debug.log
+yarn-error.log
+.env
+build/ # Ya que el build se hace dentro del contenedor, no necesitamos el local
+dist/ 
+*.log

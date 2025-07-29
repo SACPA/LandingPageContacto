@@ -1,0 +1,45 @@
+# Dockerfile.frontend (VERSIÓN CORRECTA, REVISALA CON MUCHO CUIDADO)
+# Asegúrate de que esta línea sea 'FROM node:20-alpine AS build'
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY public/ ./public/
+COPY src/ ./src/
+
+RUN npm run build
+
+# ASEGÚRATE DE QUE LA SIGUIENTE LÍNEA ES 'FROM nginx:alpine'
+# NO 'FROM build' o 'FROM build:latest' o algo similar.
+FROM nginx:alpine
+
+# Declarar un argumento de construcción para recibir la URL de la API
+ARG REACT_APP_API_URL
+
+# Establecerlo como una variable de entorno para que envsubst pueda usarla
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
+# Instalar gettext para envsubst
+RUN apk add --no-cache gettext # <<< Asegúrate de que diga 'gettext' y no 'gettext-runtime'
+
+# Elimina el directorio html por defecto de Nginx
+RUN rm -rf /etc/nginx/html
+
+# Copia los archivos construidos de React al directorio de servicio de Nginx
+# Esto copia desde la fase de build (con alias 'build') que usa Node.js
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copia la configuración personalizada de Nginx
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Ejecuta envsubst en los archivos HTML para reemplazar la variable.
+RUN sh -c "envsubst '\$REACT_APP_API_URL' < /usr/share/nginx/html/crm.html > /tmp/crm.html && mv /tmp/crm.html /usr/share/nginx/html/crm.html"
+RUN sh -c "envsubst '\$REACT_APP_API_URL' < /usr/share/nginx/html/dashboard.html > /tmp/dashboard.html && mv /tmp/dashboard.html /usr/share/nginx/html/dashboard.html"
+RUN sh -c "envsubst '\$REACT_APP_API_URL' < /usr/share/nginx/html/index.html > /tmp/index.html && mv /tmp/index.html /usr/share/nginx/html/index.html"
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

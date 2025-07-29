@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini CRM - Gestión de Leads</title>
+    <script>
+        // Esta variable global se definirá en el momento del build de Docker
+        // por el Dockerfile.frontend, reemplazando $REACT_APP_API_URL.
+        window.API_BASE_URL = "$REACT_APP_API_URL"; 
+        // Si el frontend está en React y se compila con Webpack, etc., 
+        // react-scripts ya inyecta estas variables.
+        // Para archivos HTML estáticos, necesitamos Nginx para hacer la sustitución.
+        // Si crm.html no es una aplicación React completa, esto es clave.
+        // Si crm.html es parte del build de React, esto no sería necesario y
+        // usarías process.env.REACT_APP_API_URL directamente en tu script.js/index.js
+    </script>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -216,7 +227,7 @@
             leadsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando leads...</td></tr>';
             showMessage('Cargando leads...', 'info');
 
-            let url = `/api/leads?limit=${LEADS_PER_PAGE}`;
+            let url = `${window.API_BASE_URL}/api/leads?limit=${LEADS_PER_PAGE}`;
             if (startAfterKey) {
                 url += `&startAfterKey=${startAfterKey}`;
             }
@@ -316,7 +327,7 @@
             showMessage(`Actualizando lead ${leadId} a ${newStatus}...`, 'info');
 
             try {
-                const response = await fetch(`/api/leads/${leadId}`, {
+                const response = await fetch(`${window.API_BASE_URL}/api/leads/${leadId}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,

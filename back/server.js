@@ -6,17 +6,19 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 const axios = require('axios');
-const path = require('path');
+const path = require('path'); // Se mantiene 'path' ya que puede ser útil para otras funciones si las añades en el futuro, aunque ya no sirve estáticos.
 const validator = require('validator');
 
 // --- CONFIGURACIÓN DE FIREBASE ADMIN SDK ---
+// Asegúrate de que 'serviceAccountKey.json' esté en la misma carpeta que 'server.js' en el contenedor Docker.
 const serviceAccount = require('./serviceAccountKey.json');
 console.log('DEBUG: SERVICE ACCOUNT CARGADA. Project ID:', serviceAccount.project_id);
 
 const DATABASE_URL = process.env.DATABASE_URL;
+// Se ha eliminado la variable API_BASE_URL de aquí, ya que es para el frontend.
 if (!DATABASE_URL) {
   console.error('ERROR: La variable de entorno DATABASE_URL no está definida en .env');
-  process.exit(1);
+  process.exit(1); // Detiene el proceso si esta variable crítica no está definida.
 }
 console.log('DEBUG: Usando DATABASE_URL:', DATABASE_URL);
 
@@ -31,7 +33,7 @@ console.log('DEBUG: Firebase Admin SDK inicializado para Realtime Database.');
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
 if (!RECAPTCHA_SECRET_KEY) {
   console.error('ERROR: La variable de entorno RECAPTCHA_SECRET_KEY no está definida en .env');
-  process.exit(1);
+  process.exit(1); // Detiene el proceso si esta variable crítica no está definida.
 }
 console.log('DEBUG: Usando RECAPTCHA_SECRET_KEY (los últimos 5 caracteres):', RECAPTCHA_SECRET_KEY.slice(-5));
 // ---------------------------------
@@ -40,7 +42,7 @@ console.log('DEBUG: Usando RECAPTCHA_SECRET_KEY (los últimos 5 caracteres):', R
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('ERROR: La variable de entorno JWT_SECRET no está definida en .env. ¡Es crucial para la seguridad!');
-  process.exit(1);
+  process.exit(1); // Detiene el proceso si esta variable crítica no está definida.
 }
 console.log('DEBUG: JWT_SECRET cargada.');
 const HASH_SALT_ROUNDS = 10; // Número de rondas de sal para bcrypt (un valor común es 10-12)
@@ -57,13 +59,15 @@ if (!DISCORD_WEBHOOK_URL) {
 // ----------------------------------------
 
 const app = express();
-const port = 3000;
+const port = 4000; // El backend escuchará en el puerto 4000. ¡Este puerto es vital para la comunicación!
 
 // --- MIDDLEWARES ---
+// FRONTEND_URL es necesario para configurar CORS, permitiendo que tu frontend (localhost:3000)
+// pueda hacer peticiones a este backend (localhost:4000).
 const FRONTEND_URL = process.env.FRONTEND_URL;
 if (!FRONTEND_URL) {
   console.error('ERROR: La variable de entorno FRONTEND_URL no está definida en .env');
-  process.exit(1);
+  process.exit(1); // Detiene el proceso si esta variable crítica no está definida.
 }
 
 app.use(cors({
@@ -73,27 +77,29 @@ console.log('DEBUG: CORS configurado para permitir origen:', FRONTEND_URL);
 
 app.use(express.json());
 
-// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
+// --- ¡SECCIÓN ELIMINADA! YA NO SE SIRVEN ARCHIVOS ESTÁTICOS DESDE EL BACKEND ---
+// Nginx en el contenedor 'frontend' se encarga de servir el frontend (index.html,
+// dashboard.html, crm.html, y todos los assets de tu aplicación React).
+// El backend solo debe manejar las solicitudes de la API y lógica de negocio.
+/*
 app.use(express.static(path.join(__dirname, 'public')));
 console.log('DEBUG: Sirviendo archivos estáticos desde:', path.join(__dirname, 'public'));
 
-// Ruta GET para servir index.html cuando se accede a la raíz del servidor
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Ruta GET para servir el dashboard.html (página de login del CRM)
 app.get('/dashboard', (req, res) => {
   console.log('DEBUG: Sirviendo dashboard.html (página de login)');
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Ruta GET para servir el crm.html (dashboard principal del CRM)
 app.get('/crm', (req, res) => {
   console.log('DEBUG: Sirviendo crm.html (dashboard principal)');
   res.sendFile(path.join(__dirname, 'public', 'crm.html'));
 });
-// --------------------------------------------
+*/
+// ------------------------------------------------------------------------------------
 
 // --- MIDDLEWARE DE AUTENTICACIÓN JWT ---
 const authenticateJWT = (req, res, next) => {
@@ -278,15 +284,11 @@ app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
     const leadId = req.params.id;
     const { status } = req.body;
 
-    // --- CAMBIO AQUÍ: Permitir el guion en la validación del ID ---
-    // Los IDs de Realtime Database pueden contener guiones, así que ajustamos la regex.
-    // Usamos una regex para permitir alfanuméricos y guiones.
     const firebaseIdRegex = /^[a-zA-Z0-9_-]+$/;
     if (!leadId || !firebaseIdRegex.test(leadId)) {
       console.warn('DEBUG WARNING: ID de lead inválido o no cumple el formato esperado:', leadId);
       return res.status(400).json({ message: 'ID de lead inválido o formato incorrecto.' });
     }
-    // ----------------------------------------------------------------
 
     const validStatuses = ['Nuevo', 'Contactado', 'Descartado'];
     if (!status || !validStatuses.includes(status)) {
@@ -455,5 +457,6 @@ app.post('/contact', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Servidor backend escuchando en http://localhost:${port}`);
-  console.log(`Frontend disponible en: http://localhost:${port}/index.html`);
+  // La línea de depuración para el frontend ha sido eliminada, ya que Nginx lo sirve.
+  // console.log(`Frontend disponible en: http://localhost:${port}/index.html`);
 });

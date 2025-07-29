@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: my-backend-service
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./.env
+    networks:
+      - my-custom-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args: # <--- ¡Nueva sección para argumentos de construcción!
+        - REACT_APP_API_URL=${REACT_APP_API_URL} # Pasa la variable del .env al build
+    container_name: my-frontend-service
+    ports:
+      - "3000:80"
+    env_file:
+      - ./.env # Se mantiene para variables de entorno en tiempo de ejecución
+    networks:
+      - my-custom-network
+    depends_on:
+      - backend
+
+networks:
+  my-custom-network:
+    driver: bridge

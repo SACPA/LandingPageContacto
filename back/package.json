@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "react-scripts build"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,9 @@
     "firebase-admin": "^13.4.0",
     "install": "^0.13.0",
     "jsonwebtoken": "^9.0.2",
-    "validator": "^13.15.15"
+    "validator": "^13.15.15",
+    "react": "^18.2.0",          
+    "react-dom": "^18.2.0",      
+    "react-scripts": "^5.0.1"    
   }
 }
