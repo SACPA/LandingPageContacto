@@ -14,7 +14,7 @@ const validator = require('validator');
 
 // --- CONFIGURACIÓN DE FIREBASE ADMIN SDK ---
 // Lee la clave de servicio desde la variable de entorno de Render
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY); 
+const serviceAccount = require('./serviceAccountKey.json');
 console.log('DEBUG: SERVICE ACCOUNT CARGADA. Project ID:', serviceAccount.project_id);
 
 const DATABASE_URL = process.env.DATABASE_URL;
