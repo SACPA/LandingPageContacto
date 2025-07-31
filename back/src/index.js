@@ -9,7 +9,7 @@ document.getElementById("contactForm").addEventListener("submit", async function
     message: form.message.value,
   };
 
-  const response = await fetch("http://137.184.58.132:3960/api/contact", {
+  const response = await fetch("http://localhost:4000/api/contact", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

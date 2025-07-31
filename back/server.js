@@ -62,7 +62,7 @@ if (!DISCORD_WEBHOOK_URL) {
 // ----------------------------------------
 
 const app = express();
-const port = 3960; // El backend escuchará en el puerto 4000. ¡Este puerto es vital para la comunicación!
+const port = 4000; // El backend escuchará en el puerto 4000. ¡Este puerto es vital para la comunicación!
 
 // --- MIDDLEWARES (Orden importante: JSON y CORS primero) ---
 app.use(express.json()); // Necesario para parsear el body de las solicitudes POST/PUT
@@ -442,6 +442,6 @@ app.put('/api/leads/:id', authenticateJWT, async (req, res) => {
 // -----------------------------------------------------------------------------
 
 app.listen(port, () => {
-  console.log(`Servidor backend escuchando en http://137.184.58.132:${port}`);
+  console.log(`Servidor backend escuchando en http://localhost:${port}`);
   // Ya no servimos el frontend desde aquí, Render solo es el backend API
 });
