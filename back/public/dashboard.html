@@ -101,10 +101,8 @@
         const loginForm = document.getElementById('loginForm');
         const messageDiv = document.getElementById('message');
 
-        // --- URLs de la aplicación ---
-        const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // URL de tu backend en Render
-        const FRONTEND_BASE_URL = "https://landingpageidygs92.netlify.app"; // URL de tu frontend en Netlify
-        // ---------------------------
+        // URL del backend de Render
+        const BACKEND_URL = "https://landingpagecontacto.onrender.com"; // ¡URL REAL DE RENDER!
 
         function showMessage(text, type) {
             messageDiv.textContent = text;
@@ -121,7 +119,7 @@
             showMessage('Iniciando sesión...', 'info');
 
             try {
-                const response = await fetch(`${BACKEND_URL}/admin/login`, { // Llama al backend de Render
+                const response = await fetch(`${BACKEND_URL}/admin/login`, { // Usando la URL de Render
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -137,7 +135,7 @@
                     console.log('DEBUG: Token JWT almacenado:', data.token);
 
                     setTimeout(() => {
-                        window.location.href = `${FRONTEND_BASE_URL}/crm`; // Redirige al CRM usando la URL de Netlify
+                        window.location.href = `${BACKEND_URL}/crm`; // Redirige al CRM usando la URL de Render
                     }, 1500); 
 
                 } else {
