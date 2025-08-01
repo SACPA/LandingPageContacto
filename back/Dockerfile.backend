@@ -10,6 +10,6 @@ RUN npm install
 COPY server.js ./
 COPY serviceAccountKey.json ./
 
-EXPOSE 4000
+EXPOSE 3960
 
 CMD ["node", "server.js"]
