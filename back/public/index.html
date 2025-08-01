@@ -217,7 +217,7 @@
     </div>
 
     <!-- ¡CLAVE CORREGIDA AQUÍ! -->
-    <div class="g-recaptcha" data-sitekey="6LcT5YsrAAAAANLfiCM-kgOU3A3P7mZJJTWUwUfb"></div> 
+    <div class="g-recaptcha" data-sitekey="6LfSWZcrAAAAAE0o7L4f3iNq0KAB5GzPHQrapcza"></div> 
     <button type="submit">Enviar</button>
   </form>
 
@@ -328,48 +328,6 @@
         }
     });
 
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData);
-
-      data.privacyConsent = document.getElementById("privacyConsent").checked;
-
-      const recaptchaResponse = grecaptcha.getResponse();
-
-      if (!recaptchaResponse) {
-        showCustomMessage("Por favor, completa el CAPTCHA.", 'error');
-        return; 
-      }
-
-      data.recaptchaToken = recaptchaResponse; 
-
-      console.log(data);
-
-      try {
-        const res = await fetch("https://landingpagecontacto.onrender.com/contact", { // URL de Render
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        if (res.ok) {
-          showCustomMessage("Mensaje enviado con éxito.", 'success');
-          form.reset();
-          grecaptcha.reset(); 
-        } else {
-          const errorData = await res.json();
-          showCustomMessage(`Error al enviar el mensaje: ${errorData.message || 'Error desconocido'}`, 'error');
-          grecaptcha.reset(); 
-        }
-      } catch (error) {
-        console.error("Error de red o del servidor:", error);
-        showCustomMessage("Hubo un problema de conexión. Inténtalo de nuevo más tarde.", 'error');
-        grecaptcha.reset(); 
-      }
-    });
   </script>
 </body>
 </html>

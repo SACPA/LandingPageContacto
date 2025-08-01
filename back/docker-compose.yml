@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: my-backend-service
     ports:
-      - "4000:4000"
+      - "3160:4000"
     env_file:
       - ./.env
     networks:
@@ -21,7 +21,7 @@ services:
         - REACT_APP_API_URL=${REACT_APP_API_URL} # Pasa la variable del .env al build
     container_name: my-frontend-service
     ports:
-      - "3000:80"
+      - "3144:80"
     env_file:
       - ./.env # Se mantiene para variables de entorno en tiempo de ejecución
     networks:

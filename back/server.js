@@ -28,7 +28,7 @@ const serviceAccount = require('./serviceAccountKey.json');
 //   process.exit(1);
 // }
 
-const DATABASE_URL ='https://landingpage-f924f-default-rtdb.firebaseio.com';
+const DATABASE_URL = 'https://landingpage-f924f-default-rtdb.firebaseio.com';
 if (!DATABASE_URL) {
   console.error('ERROR: La variable de entorno DATABASE_URL no está definida en .env');
   process.exit(1);
@@ -43,7 +43,7 @@ console.log('DEBUG: Firebase Admin SDK inicializado para Realtime Database.');
 // ------------------------------------------
 
 // --- CONFIGURACIÓN DE reCAPTCHA ---
-const RECAPTCHA_SECRET_KEY = "6LdWVZYrAAAAAGT1RQ_vI6YORWvVIuzV_y2hD0LI";
+const RECAPTCHA_SECRET_KEY = "6LfSWZcrAAAAAGMK27C94yW3JMNn9hY5vXizWMGn";
 if (!RECAPTCHA_SECRET_KEY) {
   console.error('ERROR: La variable de entorno RECAPTCHA_SECRET_KEY no está definida en .env');
   process.exit(1);
@@ -80,9 +80,7 @@ if (!FRONTEND_URL) {
   console.error('ERROR: La variable de entorno FRONTEND_URL no está definida en .env');
   process.exit(1);
 }
-app.use(cors({
-  origin: FRONTEND_URL
-}));
+app.use(cors());
 console.log('DEBUG: CORS configurado para permitir origen:', FRONTEND_URL);
 // -----------------------------------------------------------
 
@@ -91,7 +89,7 @@ console.log('DEBUG: CORS configurado para permitir origen:', FRONTEND_URL);
 // ======================================================================
 
 // --- RUTA PARA EL FORMULARIO DE CONTACTO ---
-app.post('/contact', async (req, res) => {
+app.post('/api/contact', async (req, res) => {
   try {
     console.log('DEBUG: Solicitud POST recibida en /contact');
     let { name, email, phone, message, privacyConsent, recaptchaToken } = req.body;
@@ -116,18 +114,23 @@ app.post('/contact', async (req, res) => {
       const googleVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`;
       console.log('DEBUG: URL de verificación de Google construida.');
       const recaptchaVerificationResponse = await axios.post(googleVerifyUrl);
+      console.log(recaptchaVerificationResponse,"OUSDHFOUDS");
       const { success, score, 'error-codes': errorCodes } = recaptchaVerificationResponse.data;
-      console.log(success)
-      console.log('DEBUG: Respuesta de la API de reCAPTCHA - success:', success);
-      console.log('DEBUG: Respuesta de la API de reCAPTCHA - score:', score);
+
+      console.log('DEBUG: Respuesta reCAPTCHA - success:', success);
+      console.log('DEBUG: Respuesta reCAPTCHA - score:', score);
       if (errorCodes) {
-        console.log('DEBUG: Respuesta de la API de reCAPTCHA - error-codes:', errorCodes);
+        console.log('DEBUG: reCAPTCHA - error-codes:', errorCodes);
       }
+
       if (!success) {
-        console.error('DEBUG ERROR: Fallo en la verificación de reCAPTCHA (desde Google API). Códigos de error:', errorCodes);
-        return res.status(400).json({ message: 'Falló la verificación del CAPTCHA. Por favor, inténtalo de nuevo.' });
+        console.error('DEBUG ERROR: Verificación fallida en Google reCAPTCHA API');
+        return res.status(400).json({ message: 'Falló la verificación del CAPTCHA. Intenta de nuevo.' });
       }
-      console.log('DEBUG: reCAPTCHA verificado con éxito por Google.');
+
+  
+
+      console.log('DEBUG: reCAPTCHA verificado correctamente.');
     } catch (recaptchaError) {
       console.error('DEBUG ERROR: Error al comunicarse con la API de reCAPTCHA:', recaptchaError.message);
       return res.status(500).json({ message: 'Error interno al verificar el CAPTCHA.' });
