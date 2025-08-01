@@ -21,7 +21,7 @@ const form = document.getElementById("contactForm");
       console.log(data);
 
       try {
-        const res = await fetch("http://137.184.58.132:3160/api/contact", { // URL de Render
+        const res = await fetch("https://chavezmartinezapi.duckdns.org/api/contact", { // URL de Render
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
