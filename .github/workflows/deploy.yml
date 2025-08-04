@@ -1,48 +1,54 @@
-name: Despliegue Automático Frontend y Backend
+name: Deploy to VPS
 
 on:
   push:
     branches:
-      - main
-      - master
+      - main # O master, dependiendo de tu rama principal
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout del código
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-      - name: Iniciar sesión en Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Construir y subir la imagen Docker del backend
-        uses: docker/build-push-action@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
         with:
-          context: ./back
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tu-backend-app:latest
-          file: ./back/Dockerfile.backend
+          tags: |
+            joelchl/backamimage:latest
+            joelchl/frontamimage:latest
+          file: ./Dockerfile.backend
 
-      - name: Construir y subir la imagen Docker del frontend
-        uses: docker/build-push-action@v4
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v2
         with:
-          context: ./back
+          context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tu-frontend-app:latest
-          file: ./back/Dockerfile.frontend
+          tags: joelchl/frontamimage:latest
+          file: ./Dockerfile.frontend
 
-      - name: Desplegar en el VPS por SSH
-        uses: appleboy/ssh-action@v0.1.7
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/deploy-app
+            docker compose down --remove-orphans
             docker compose pull
-            docker compose up -d
-            echo "Despliegue completado con éxito."
+            docker compose up -d --build
+            echo "Deployment completed successfully!"
