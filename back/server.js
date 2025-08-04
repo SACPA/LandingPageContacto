@@ -39,7 +39,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: DATABASE_URL,
 });
-console.log('DEBUG: Firebase Admin SDK inicializado para Realtime databeis.');
+console.log('DEBUG: Firebase Admin SDK inicializado para Realtime databei.');
 // ------------------------------------------
 
 // --- CONFIGURACIÓN DE reCAPTCHA ---
