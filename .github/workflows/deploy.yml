@@ -22,18 +22,18 @@ jobs:
       - name: Construir y subir la imagen Docker del backend
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./back
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tu-backend-app:latest
-          file: ./Dockerfile.backend
+          file: ./back/Dockerfile.backend
 
       - name: Construir y subir la imagen Docker del frontend
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./back
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tu-frontend-app:latest
-          file: ./Dockerfile.frontend
+          file: ./back/Dockerfile.frontend
 
       - name: Desplegar en el VPS por SSH
         uses: appleboy/ssh-action@v0.1.7
