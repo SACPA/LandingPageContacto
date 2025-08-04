@@ -8,7 +8,6 @@ COPY package*.json ./
 RUN npm install
 
 COPY server.js ./
-COPY serviceAccountKey.json ./
 
 EXPOSE 4000
 
